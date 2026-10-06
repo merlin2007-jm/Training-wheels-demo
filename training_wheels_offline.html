@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training Wheels for AI — Offline Prototype</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1E2A47; --teal:#14B8A6; --teal-t:#CCFBF1;
+    --sun:#FBBF24; --coral:#FB7185; --coral-t:#FFE4E6;
+    --cloud:#F8FAFC; --border:#CBD5E1; --slate:#475569;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cloud);font-family:'Inter',sans-serif;color:var(--navy)}
+  h1,h3{font-family:'Poppins',sans-serif}
+  header{background:var(--navy);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px}
+  header .dot{width:9px;height:9px;border-radius:50%;background:var(--sun)}
+  header h1{font-size:19px;margin:0}
+  header p{margin:2px 0 0;color:#CBD5E1;font-size:12.5px}
+  .wrap{max-width:1050px;margin:22px auto;padding:0 18px;display:grid;grid-template-columns:280px 1fr;gap:18px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px}
+  .card h3{margin:0 0 10px;font-size:15px}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between}
+  .switch{width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;cursor:pointer}
+  .switch.on{background:var(--teal)}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.15s}
+  .switch.on::after{left:23px}
+  .stage-list{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+  .stage{padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:12.5px;font-weight:600;color:var(--slate)}
+  .stage.active{background:var(--teal-t);border-color:var(--teal);color:var(--navy)}
+  .meter{height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-top:8px}
+  .meter-fill{height:100%;background:var(--teal);width:50%;transition:.3s}
+  .score-line{display:flex;justify-content:space-between;font-size:12px;color:var(--slate);margin-top:14px}
+  .chat-card{display:flex;flex-direction:column;height:70vh}
+  .messages{flex:1;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:78%;padding:10px 13px;border-radius:12px;font-size:14px;line-height:1.45}
+  .msg.user{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:3px}
+  .msg.ai{align-self:flex-start;background:var(--cloud);border:1px solid var(--border);border-bottom-left-radius:3px}
+  .msg.sys{align-self:center;background:var(--sun);color:var(--navy);font-weight:600;font-size:12px;padding:6px 12px;border-radius:20px}
+  .feedback{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .fbtn{font-size:11.5px;padding:5px 9px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;font-weight:600}
+  .fbtn:hover{border-color:var(--teal)}
+  .composer{display:flex;gap:8px;margin-top:12px}
+  .composer input{flex:1;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13.5px}
+  button.primary{background:var(--teal);color:var(--navy);border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13.5px}
+  .note{font-size:11.5px;color:var(--slate);margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="dot"></div>
+  <div>
+    <h1>Training Wheels for AI — Offline Prototype</h1>
+    <p>No API key needed — AI replies are simulated locally in this file</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <h3>Training Wheels</h3>
+    <div class="toggle-row">
+      <span style="font-size:13px;font-weight:600">Feature</span>
+      <div class="switch on" id="twSwitch" onclick="toggleTW()"></div>
+    </div>
+    <div class="stage-list" id="stageList"></div>
+    <div class="score-line"><span>Independence score</span><span id="scoreVal">0.50</span></div>
+    <div class="meter"><div class="meter-fill" id="scoreFill"></div></div>
+  </div>
+
+  <div class="card chat-card">
+    <div class="messages" id="messages">
+      <div class="msg sys">This demo gives canned sample replies — no real AI call is made.</div>
+    </div>
+    <div class="composer">
+      <input id="userInput" placeholder="Type anything, e.g. 'fix my code'" onkeydown="if(event.key==='Enter')send()">
+      <button class="primary" onclick="send()">Send</button>
+    </div>
+    <div class="note">After each reply, click a feedback button — that moves the wheels up or down, just like the real version would.</div>
+  </div>
+</div>
+
+<script>
+const LEVELS = [
+  { name: 'Wheels down',  sample: "Here is the full solution, step by step: first check the loop condition, then fix the off-by-one error on line 4, then re-run your tests." },
+  { name: 'Wheels rising',sample: "Hint: look closely at line 4 — what value does it return? Try fixing it yourself before I give more away." },
+  { name: 'Almost free',  sample: "Try it yourself first. Once you've attempted a fix, send it back and I'll point out anything still wrong." },
+  { name: 'Wheels off',   sample: "Go ahead and handle it — ping me only if you get stuck." }
+];
+
+let state = { level: 1, score: 0.5, stable: 0, twOn: true };
+
+function renderStages(){
+  const list = document.getElementById('stageList');
+  list.innerHTML = '';
+  LEVELS.forEach((lv, i) => {
+    const d = document.createElement('div');
+    d.className = 'stage' + (i === state.level ? ' active' : '');
+    d.textContent = (i + 1) + '. ' + lv.name;
+    list.appendChild(d);
+  });
+  document.getElementById('scoreVal').textContent = state.score.toFixed(2);
+  document.getElementById('scoreFill').style.width = (state.score * 100) + '%';
+}
+
+function toggleTW(){
+  state.twOn = !state.twOn;
+  document.getElementById('twSwitch').classList.toggle('on', state.twOn);
+}
+
+function pickLevel(){
+  let target = state.score < .25 ? 0 : state.score < .5 ? 1 : state.score < .75 ? 2 : 3;
+  if (target < state.level) { state.level = target; state.stable = 0; }
+  else if (target > state.level && state.stable >= 2) { state.level += 1; state.stable = 0; }
+}
+
+function addMsg(text, cls){
+  const m = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  m.appendChild(d);
+  m.scrollTop = m.scrollHeight;
+  return d;
+}
+
+function addFeedback(afterNode){
+  const f = document.createElement('div');
+  f.className = 'feedback';
+  const opts = [
+    ['Understood it myself', +0.15],
+    ['Needed to edit it',    -0.05],
+    ['Made a mistake',       -0.15]
+  ];
+  opts.forEach(([label, delta]) => {
+    const b = document.createElement('button');
+    b.className = 'fbtn';
+    b.textContent = label;
+    b.onclick = () => {
+      state.score  = Math.min(1, Math.max(0, state.score + delta));
+      state.stable = delta > 0 ? state.stable + 1 : 0;
+      pickLevel();
+      renderStages();
+      f.querySelectorAll('button').forEach(x => x.disabled = true);
+      addMsg('Balance agent: score ' + state.score.toFixed(2) + ' → ' + LEVELS[state.level].name, 'sys');
+    };
+    f.appendChild(b);
+  });
+  afterNode.parentElement.appendChild(f);
+}
+
+function send(){
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  addMsg(text, 'user');
+  input.value = '';
+
+  setTimeout(() => {
+    const level = state.twOn ? state.level : 3;
+    const reply = addMsg(LEVELS[level].sample, 'ai');
+    if (state.twOn) addFeedback(reply);
+  }, 400);
+}
+
+renderStages();
+</script>
+</body>
+</html>
